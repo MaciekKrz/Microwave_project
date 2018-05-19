@@ -1,0 +1,20 @@
+#time {
+    background-color: #1b8dbb;
+    display: inline-block;
+    text-align: center;
+    border-radius: 5px;
+    width: 90px;
+    height: 50px;
+}
+#power {
+    background-color: #1b8dbb;
+    display: inline-block;
+    text-align: center;
+    border-radius: 5px;
+    width: 90px;
+    height: 50px;
+}
+.centered {
+    position: fixed;
+    left: 40%;
+}
