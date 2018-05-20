@@ -2,7 +2,7 @@ from django.db import models
 
 
 class MicrowaveStatus(models.Model):
-    On = models.BooleanField(default=False)  #Tak napradę nie będę tego wykorzystywał
+    On = models.BooleanField(default=False)     # This is not used
     TTL = models.PositiveSmallIntegerField()
     Power = models.PositiveSmallIntegerField()
 

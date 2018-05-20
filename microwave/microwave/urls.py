@@ -16,13 +16,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls import url, include
-from myapp.views import StartView, StatusView, TestView
+from myapp.views import StartView, StatusView, microwave_event
 
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     url(r'^start_page/$', StartView.as_view(), name="index"),
     url(r'^microwave/status/(?P<id>(\d)+)$', StatusView.as_view(), name="status"),
-    url(r'^microwave/event$', TestView.as_view(), name="create"),
+    url(r'^microwave/event$', microwave_event),
     url(r'^store/', include('myapp.urls'))
     ]

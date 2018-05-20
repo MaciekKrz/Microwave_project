@@ -6,8 +6,9 @@ $(function() {
 
 
     //////////////// Communication with BACK-END every second /////////////////
-    var id = setInterval(function () {
+    setInterval(function () {
         console.log('jestem wywoływana co sekundę');
+
         $.ajax({
             url: 'http://127.0.0.1:8000/store/cache',
             type: 'GET',
@@ -25,14 +26,23 @@ $(function() {
                     type: 'PUT',
                     data: {
                     "On": true,
-                    "TTL": result.TTL, //add +10s (but how?)
+                    "TTL": result.TTL,
                     "Power": result.Power
                     }
-                 }).done()
+                 })
             }else {
                  $(function() {
                     toogle_one.bootstrapToggle('off');
-                })
+                });
+                $.ajax({
+                    url: 'http://127.0.0.1:8000/microwave/status/1',
+                    type: 'PUT',
+                    data: {
+                    "On": false,
+                    "TTL": 1,
+                    "Power": 0
+                    }
+                 })
             }
         });
         }, 1000
@@ -45,19 +55,34 @@ $(function() {
         var actual_time = time.text();
         var actual_power = power.text();
 
-        if (parseInt(actual_time) === 99) {
+        if (parseInt(actual_time) === 0) {
+            $.ajax({
+                url: 'http://127.0.0.1:8000/microwave/event',
+                type: 'PUT',
+                data: {
+                    "On": true,
+                    "TTL": 10,
+                    "Power": 100  // default value for power
+                }
+            }).done(function () {
+                console.log('Put completed')
+            }).fail(function () {
+                alert('Something went wrong');
+            })
+
+        }else if (parseInt(actual_time) === 99) {
             alert('This is maximal time');
 
         }else if (parseInt(actual_time) >= 90 && parseInt(actual_time) <= 99 ){
             $.ajax({
-                url: 'http://127.0.0.1:8000/store/',
+                url: 'http://127.0.0.1:8000/microwave/event',
                 type: 'PUT',
                 data: {
                     "On": true,
                     "TTL": 99,
                     "Power": actual_power
                 }
-            }).done(function (result) {
+            }).done(function () {
                 console.log('Put completed')
             }).fail(function () {
                 alert('Something went wrong');
@@ -65,11 +90,11 @@ $(function() {
 
         }else {
             $.ajax({
-                url: 'http://127.0.0.1:8000/store/',
+                url: 'http://127.0.0.1:8000/microwave/event',
                 type: 'PUT',
                 data: {
                     "On": true,
-                    "TTL": parseInt(actual_time) +10,
+                    "TTL": parseInt(actual_time)+10,
                     "Power": actual_power
                 }
             }).done(function (result) {
@@ -91,7 +116,7 @@ $(function() {
 
         }else if (parseInt(actual_time) >=1 && parseInt(actual_time) <=9) {
              $.ajax({
-                url: 'http://127.0.0.1:8000/store/',
+                url: 'http://127.0.0.1:8000/microwave/event',
                 type: 'PUT',
                 data: {
                         "On": true,
@@ -106,11 +131,11 @@ $(function() {
 
         }else {
             $.ajax({
-                url: 'http://127.0.0.1:8000/store/',
+                url: 'http://127.0.0.1:8000/microwave/event',
                 type: 'PUT',
                 data: {
                         "On": true,
-                        "TTL": parseInt(actual_time) - 10,
+                        "TTL": parseInt(actual_time)-10,
                         "Power": actual_power
                     }
             }).done(function () {
@@ -129,9 +154,13 @@ $(function() {
 
         if (parseInt(actual_power) === 1000){
             alert('Max power is 1kW')
+
+        }else if (parseInt(actual_power) === 0) {
+            alert('Power can be change only during work')
+
         }else {
             $.ajax({
-                url: 'http://127.0.0.1:8000/store/',
+                url: 'http://127.0.0.1:8000/microwave/event',
                 type: 'PUT',
                 data: {
                     "On": true,
@@ -152,11 +181,15 @@ $(function() {
         var actual_time = time.text();
         var actual_power = power.text();
 
-        if (parseInt(actual_power) === 100){
-            alert('Power can\'t be lower')
+        if (parseInt(actual_power) === 0 ){
+            alert('Power can\'t be negative')
+
+        }else if (parseInt(actual_power) === 100) {
+            alert('This is minimal power')
+
         }else {
             $.ajax({
-                url: 'http://127.0.0.1:8000/store/',
+                url: 'http://127.0.0.1:8000/microwave/event',
                 type: 'PUT',
                 data: {
                     "On": true,
@@ -180,7 +213,7 @@ $(function() {
             alert('Microwave already stopped')
         }else {
             $.ajax({
-                url: 'http://127.0.0.1:8000/store/',
+                url: 'http://127.0.0.1:8000/microwave/event',
                 type: 'PUT',
                 data: {
                     "On": false,
@@ -194,6 +227,4 @@ $(function() {
             })
         }
     });
-
-
 });

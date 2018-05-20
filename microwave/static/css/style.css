@@ -20,9 +20,7 @@
     position: fixed;
     left: 40%;
 }
-
 p {
- text-align: center;
- line-height: 45px;
-
+    text-align: center;
+    line-height: 45px;
 }
