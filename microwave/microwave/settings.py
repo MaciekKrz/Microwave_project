@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+CACHE_TTL = 0.5
+
 
 # Application definition
 
@@ -90,7 +92,8 @@ CACHES = {
         'LOCATION': 'redis://127.0.0.1:6379/1',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+        },
+        "KEY_PREFIX": "example"
     }
 }
 

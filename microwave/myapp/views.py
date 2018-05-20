@@ -13,9 +13,15 @@ from django.conf import settings
 from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.permissions import AllowAny
+from django.utils.deprecation import MiddlewareMixin
 
 
 CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
+
+key = 'product'
+with cache.lock(key, expire=60):
+     ttl = cache.ttl(key)
+     cache.ttl(key, ttl+10)
 
 
 class StartView(View):
@@ -24,17 +30,27 @@ class StartView(View):
                       template_name="base.html")
 
 
-class StatusView(APIView):
-    def get_object(self, pk):
+class StatusView(APIView, MiddlewareMixin):
+    def get_object(self, pk=1):
         try:
             return MicrowaveStatus.objects.get(pk=pk)
         except MicrowaveStatus.DoesNotExist:
             raise Http404
 
-    def get(self, request, id, format=None):
+    def get(self, request, id=1, format=None):
         status = self.get_object(id)
         serializer = MicrowaveSerializer(status, context={"request": request})
         return Response(serializer.data)
+
+    @csrf_exempt
+    def put(self, request, id=1, format=None):
+        microwave_status = self.get_object(id)
+        _data = request.POST.copy()
+        _data['TTL'] = str(int(_data['TTL']) - 1)
+        serializer = MicrowaveSerializer(microwave_status, data=_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
 
     # def get(self, request):
         # status = MicrowaveStatus.objects.all()
@@ -101,15 +117,19 @@ def viewProduct(request, pk=1):
             serializer = MicrowaveSerializer(snippet, data=request.data)
             if serializer.is_valid():
                 serializer.save()
+                print("**", serializer.data)
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     # products = MicrowaveStatus.objects.all()
     # results = [product.to_json() for product in products]
     # return Response(results, status=status.HTTP_201_CREATED)
 
 
-@api_view(['GET', 'POST, PUT'])
+
+
+@api_view(['GET', 'POST', 'PUT'])
 def view_cached_product(request):
     if 'product' in cache:
         # get results from cache
@@ -118,7 +138,7 @@ def view_cached_product(request):
 
     else:
         products = MicrowaveStatus.objects.all()
-        results = [product.to_json() for product in products]
+        results = products[0].to_json()
         # store data in cache
         cache.set('product', results, timeout=CACHE_TTL)
         return Response(results, status=status.HTTP_201_CREATED)

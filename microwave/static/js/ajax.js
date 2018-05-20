@@ -1,4 +1,3 @@
-
 $(function() {
 
     var time = $('#time p');
@@ -6,12 +5,11 @@ $(function() {
     var toogle_one = $('#toggle-one');
 
 
-    //////////////// Communication with BACK-END /////////////////
+    //////////////// Communication with BACK-END every second /////////////////
     var id = setInterval(function () {
         console.log('jestem wywoływana co sekundę');
-
         $.ajax({
-            url: 'http://127.0.0.1:8000/microwave/status/1',
+            url: 'http://127.0.0.1:8000/store/cache',
             type: 'GET',
             dataType: 'json'
          }).done(function (result) {
@@ -21,8 +19,17 @@ $(function() {
             if (result.TTL > 0) {
                 $(function() {
                     toogle_one.bootstrapToggle('on');
-                })
-            } else {
+                });
+                $.ajax({
+                    url: 'http://127.0.0.1:8000/microwave/status/1',
+                    type: 'PUT',
+                    data: {
+                    "On": true,
+                    "TTL": result.TTL, //add +10s (but how?)
+                    "Power": result.Power
+                    }
+                 }).done()
+            }else {
                  $(function() {
                     toogle_one.bootstrapToggle('off');
                 })
@@ -36,34 +43,37 @@ $(function() {
     $("button#Tplus").on("click", function () {
 
         var actual_time = time.text();
+        var actual_power = power.text();
 
         if (parseInt(actual_time) === 99) {
             alert('This is maximal time');
 
-        }else if ( 90 <= parseInt(actual_time) <= 98){
+        }else if (parseInt(actual_time) >= 90 && parseInt(actual_time) <= 99 ){
             $.ajax({
                 url: 'http://127.0.0.1:8000/store/',
-                type: 'POST',
+                type: 'PUT',
                 data: {
                     "On": true,
-                    "TTL": 99, // NEED TO SET TTL ON 99 (but how?)
-                    "Power": 600
+                    "TTL": 99,
+                    "Power": actual_power
                 }
             }).done(function (result) {
-                alert('PATCH	completed');
-            });
+                console.log('Put completed')
+            }).fail(function () {
+                alert('Something went wrong');
+            })
 
         }else {
             $.ajax({
                 url: 'http://127.0.0.1:8000/store/',
-                type: 'POST',
+                type: 'PUT',
                 data: {
                     "On": true,
-                    "TTL": 44, //add +10s (but how?)
-                    "Power": 600
+                    "TTL": parseInt(actual_time) +10,
+                    "Power": actual_power
                 }
             }).done(function (result) {
-                alert('PATCH	completed');
+                console.log('Put completed');
             }).fail(function () {
                 alert('Something went wrong');
             })
@@ -74,43 +84,39 @@ $(function() {
     $("button#T-").on("click", function (){
 
         var actual_time = time.text();
+        var actual_power = power.text();
 
         if (parseInt(actual_time) === 0){
             alert('Time can\'t be negative');
 
-        }else if (9 <= parseInt(actual_time) <= 1) {
+        }else if (parseInt(actual_time) >=1 && parseInt(actual_time) <=9) {
              $.ajax({
-                url: 'http://127.0.0.1:8000/microwave/event',
+                url: 'http://127.0.0.1:8000/store/',
                 type: 'PUT',
-                dataType: "json",
                 data: {
                         "On": true,
-                        "TTL": 0, // Set timer to zero (but how?)
-                        "Power": 600
+                        "TTL": 0,
+                        "Power": actual_power
                     }
-            }).done(function (result) {
-                alert('PATCH	completed');
+            }).done(function () {
+                console.log('Put completed');
             }).fail(function () {
                 alert('Something went wrong');
-                alert(actual_power);
             })
 
         }else {
             $.ajax({
-                url: 'http://127.0.0.1:8000/microwave/event',
+                url: 'http://127.0.0.1:8000/store/',
                 type: 'PUT',
-                dataType: "json",
-                // data: 'On=True&TTL=20&Power=500'
                 data: {
                         "On": true,
-                        "TTL": 34,  //-10s (but how?)
-                        "Power": 600
+                        "TTL": parseInt(actual_time) - 10,
+                        "Power": actual_power
                     }
-            }).done(function (result) {
-                alert('PATCH	completed');
+            }).done(function () {
+                console.log('Put completed');
             }).fail(function () {
                 alert('Something went wrong');
-                alert(actual_power);
             })
         }
     });
@@ -118,21 +124,22 @@ $(function() {
      /////////////// P+ (power +100W) event //////////////////////
 	$("button#Pplus").on("click", function () {
 
+        var actual_time = time.text();
         var actual_power = power.text();
 
         if (parseInt(actual_power) === 1000){
-            alert('Max power cant be lower')
+            alert('Max power is 1kW')
         }else {
             $.ajax({
                 url: 'http://127.0.0.1:8000/store/',
                 type: 'PUT',
                 data: {
                     "On": true,
-                    "TTL": 44,
-                    "Power": 700
+                    "TTL": actual_time,
+                    "Power": parseInt(actual_power)+100
                 }
-            }).done(function (result) {
-                alert('PATCH	completed');
+            }).done(function () {
+                console.log('PUT completed');
             }).fail(function () {
                 alert('Something went wrong');
             })
@@ -142,9 +149,10 @@ $(function() {
      /////////////// P- (timer -100W) event //////////////////////
 	$("button#P-").on("click", function () {
 
+        var actual_time = time.text();
         var actual_power = power.text();
 
-        if (parseInt(actual_power) === 100 || parseInt(actual_power) === 0){
+        if (parseInt(actual_power) === 100){
             alert('Power can\'t be lower')
         }else {
             $.ajax({
@@ -152,11 +160,11 @@ $(function() {
                 type: 'PUT',
                 data: {
                     "On": true,
-                    "TTL": 44,
-                    "Power": 100
+                    "TTL": actual_time,
+                    "Power": parseInt(actual_power)-100
                 }
-            }).done(function (result) {
-                alert('PATCH	completed');
+            }).done(function () {
+                console.log('PUT completed');
             }).fail(function () {
                 alert('Something went wrong');
             })
@@ -165,19 +173,26 @@ $(function() {
 
 	 /////////////// C (stop microwave) event //////////////////////
     $("button#C").on("click", function () {
-        $.ajax({
-            url: 'http://127.0.0.1:8000/store/',
-            type: 'PUT',
+
+        var actual_time = time.text();
+
+        if (parseInt(actual_time) ===0){
+            alert('Microwave already stopped')
+        }else {
+            $.ajax({
+                url: 'http://127.0.0.1:8000/store/',
+                type: 'PUT',
                 data: {
                     "On": false,
                     "TTL": 0,
-                    "Power": 0
+                    "Power": 100
                 }
-        }).done(function (result) {
-            alert('Microwave Stopped');
-        }).fail(function () {
-            alert('Something went wrong');
-        })
+            }).done(function () {
+                alert('Microwave Stopped');
+            }).fail(function () {
+                alert('Something went wrong');
+            })
+        }
     });
 
 
