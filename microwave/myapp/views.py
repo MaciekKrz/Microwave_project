@@ -9,17 +9,19 @@ from .models import MicrowaveStatus
 from .serializers import MicrowaveSerializer
 from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.conf import settings
-from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.deprecation import MiddlewareMixin
+from django.views.decorators.cache import cache_page
+from django.http import HttpResponse
+from django.core.cache import cache
+from django.shortcuts import redirect
 
 
 CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
-# key = 'product'
-# with cache.lock(key, expire=60):
-#      ttl = cache.ttl(key)
-#      cache.ttl(key, ttl+10)
+#############################################################3
+
+import json
 
 
 class StartView(View):
@@ -76,16 +78,87 @@ def microwave_event(request, pk=1):
 
 
 ############################## CACHE #####################################
+@cache_page(CACHE_TTL)
 @api_view(['GET', 'POST', 'PUT'])
 def view_cached_product(request):
     if 'product' in cache:
-        # get results from cache
-        products = cache.get('product')
-        return Response(products, status=status.HTTP_201_CREATED)
-
+        power = cache.get('product')
+        return Response(power, status=status.HTTP_200_OK)
     else:
-        products = MicrowaveStatus.objects.all()
-        results = products[0].to_json()
-        # store data in cache
-        cache.set('product', results, timeout=CACHE_TTL)
-        return Response(results, status=status.HTTP_201_CREATED)
+        cache.set('product', {'power': 100}, timeout=CACHE_TTL)
+        power = cache.get('product')
+        return Response(power, status=status.HTTP_201_CREATED)
+
+
+############################################# REDIS ###############################################
+def status(request):
+    microwave_status = cache.get("status")
+    if microwave_status is None:
+        cache.set("status", '{"power":100}', timeout=10)
+    microwave_object = json.loads(microwave_status)
+    return HttpResponse("""
+    Power: {}<br/>
+    Timer: {}<br/>
+    Buttons:<br/><a href="/T+">T+</a> <br/> <a href="/T-">T-</a></br>
+            <a href="/P+">P+</a> <br/> <a href="/P-">P-</a></br>
+    Stop microwave: <a href="/stop">Stop</a>
+    """.format(microwave_object['power'], cache.ttl("status")))
+
+
+def timer_plus(request):
+    microwave_status = cache.get("status")
+    if microwave_status is None:
+        cache.set("status", '{"power":100}', timeout=1)
+    if cache.ttl("status") >= 99:
+        return HttpResponse("This is maximal time")
+    microwave_status = cache.get("status")
+    microwave_object = json.loads(microwave_status)
+    if cache.ttl("status") >= 91 and cache.ttl("status") <= 99 :
+        cache.set("status", json.dumps(microwave_object), timeout=99)
+    microwave_status = cache.get("status")
+    microwave_object = json.loads(microwave_status)
+    cache.set("status", json.dumps(microwave_object), timeout=cache.ttl("status")+10)
+    return redirect('/')
+
+
+def timer_minus(request):
+    microwave_status = cache.get("status")
+    if microwave_status is None:
+        return HttpResponse("Time can't be negative")
+    microwave_status = cache.get("status")
+    if cache.ttl("status") >= 1 and cache.ttl("status") <= 9:
+        cache.delete("status")
+    microwave_object = json.loads(microwave_status)
+    cache.set("status", json.dumps(microwave_object), timeout=cache.ttl("status")-10)
+    return redirect('/')
+
+
+def power_plus(request):
+    microwave_status = cache.get("status")
+    if microwave_status is None:
+        return HttpResponse("Power can't be changed when microwave is off")
+    microwave_object = json.loads(microwave_status)
+    if microwave_object['power'] >= 1000:
+        return HttpResponse("This is maximal power")
+    microwave_object = json.loads(microwave_status)
+    microwave_object['power'] += 100
+    cache.set("status", json.dumps(microwave_object), timeout=cache.ttl("status"))
+    return redirect('/')
+
+
+def power_minus(request):
+    microwave_status = cache.get("status")
+    if microwave_status is None:
+        return HttpResponse("Power can't be changed when microwave is off")
+    microwave_object = json.loads(microwave_status)
+    if microwave_object['power'] == 100:
+         return HttpResponse ("This is minimal power")
+    microwave_object = json.loads(microwave_status)
+    microwave_object['power'] -= 100
+    cache.set("status", json.dumps(microwave_object), timeout=cache.ttl("status"))
+    return redirect('/')
+
+
+def clean_status(request):
+    cache.delete("status")
+    return redirect('/')

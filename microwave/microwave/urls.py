@@ -16,7 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls import url, include
-from myapp.views import StartView, StatusView, microwave_event
+from myapp.views import (StartView, StatusView, microwave_event,)
+from myapp.views import (status, timer_plus, timer_minus, power_plus, power_minus, clean_status,)
 
 
 urlpatterns = [
@@ -24,5 +25,12 @@ urlpatterns = [
     url(r'^start_page/$', StartView.as_view(), name="index"),
     url(r'^microwave/status/(?P<id>(\d)+)$', StatusView.as_view(), name="status"),
     url(r'^microwave/event$', microwave_event),
-    url(r'^store/', include('myapp.urls'))
-    ]
+    url(r'^store/', include('myapp.urls')),
+
+    path('', status),
+    path('T+', timer_plus),
+    path('T-', timer_minus),
+    path('P+', power_plus),
+    path('P-', power_minus),
+    path('stop', clean_status),
+]
